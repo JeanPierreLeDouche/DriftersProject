@@ -6,3 +6,4 @@ Created on Mon Oct  5 09:42:15 2020
 """
 
 import numpy as np
+import matplotlib.pyplot as plt
