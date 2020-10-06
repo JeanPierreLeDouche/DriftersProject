@@ -27,7 +27,9 @@ south_border = 45
 
 buoy_IDs = np.unique(data["ID"])
 
+buoy_IDs = np.unique(data["ID"])
 
+for i in range(buoy_IDs):
 
 
 
