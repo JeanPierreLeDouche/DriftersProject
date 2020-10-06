@@ -6,11 +6,6 @@ Created on Mon Oct  5 09:42:15 2020
 @author: Gebruiker
 """
 
-
-import numpy as np
-
-print("Hello world, groetjes van Ivo")
-print('waar komt deze verandering terecht?')
 =======
 import pandas as pd
 import numpy as np
@@ -35,10 +30,10 @@ print(data.shape)
 
 #Filtering data
 
-data = data.loc[data['Lat'] > 45]
-data = data.loc[data['Lat'] < 60]
-data = data.loc[data['Lon'] > 310]
-data = data.loc[data['Lon'] < 350]
+data = data.loc[data['Lat'] > south_border]
+data = data.loc[data['Lat'] < north_border]
+data = data.loc[data['Lon'] > west_border]
+data = data.loc[data['Lon'] < east_border]
 
 #Data after filtering
 print(data.shape)
