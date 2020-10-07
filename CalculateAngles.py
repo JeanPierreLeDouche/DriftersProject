@@ -5,8 +5,6 @@ Created on Mon Oct  5 09:42:15 2020
 @author: Gebruiker
 """
 
-<<<<<<< Updated upstream
-=======
 import pandas as pd
 import numpy as np
 import pickle
@@ -31,7 +29,7 @@ buoy_IDs = np.unique(data["ID"])
 
 for i in range(buoy_IDs):
 
-
+print("BELANGRIJKE VERANDERING" )
 
 buoy_1 = data.loc[data['ID'] == 72615]
 
@@ -50,9 +48,3 @@ ax.add_feature(cfeature.COASTLINE)
 
 
 plt.show()
->>>>>>> Stashed changes
-
-import numpy as np
-
-print("Hello world, groetjes van Ivo")
-print('waar komt deze verandering terecht?')
