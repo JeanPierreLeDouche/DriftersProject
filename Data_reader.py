@@ -10,19 +10,20 @@ quickly for further use.
 """
 
 # Replace this path with the correct path
-path = r'C:\Users\Gebruiker\Documents\Climate_Physics\Year2\MAIO\Driftersproject\buoydata_15001_mar20.dat'
-data = pd.read_table(path,
-                     header=None, sep='\s+')
+path = r'C:\Users\Ruben\Documents\CLPH\MAIO\DrifterProject\buoydata_15001_mar20.dat'
+data = pd.read_table(path, header=None, sep='\s+')
 
 data.columns = ["ID", "Month", "Day", "Year", "Lat", "Lon", "SST(Deg C)", "VE(CM/S)", "VN(CM/S)",
                 "SPD(CM/S)", "VAR.LAT", "VAR.LON", "VAR.TEMP"]
 
 to_drop = ["SST(Deg C)","VE(CM/S)","VN(CM/S)","SPD(CM/S)", "VAR.LAT", "VAR.LON", "VAR.TEMP"]
 
-data.drop(to_drop, inplace = True, axis = 1)
+data.drop(to_drop, inplace = True, axis = 'columns')
 
 data.loc[data['Lat'] > 90, 'Lat'] = np.nan
 data.loc[data['Lon'] > 360, 'Lon'] = np.nan
+
+data = data.loc[data['Year'] > 2011]
 
 ### introduce single date and hourly time format
 
@@ -36,6 +37,5 @@ data.drop(["Year", "Month", "Day", "Hour"], inplace=True, axis = 'columns')
 data = data.sort_values(by="Date")
 
 # This file is saved in the same folder as the Python file, an absolute path can be added to save at another place
-
 
 pickle.dump(data, open("BuoyDatabase.p","wb"))
