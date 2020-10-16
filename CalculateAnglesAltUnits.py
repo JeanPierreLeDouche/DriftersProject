@@ -66,8 +66,8 @@ for ID in buoy_IDs[:10]:
         # first to second and from second to third, giving two consecutive 
         # vectors 
         
-        x_prev = buoy_lats_lons.iloc[time,:]
-        x_curr = buoy_lats_lons.iloc[time+1,:]
+        x_prev = buoy_lats_lons.iloc[time+1,:]
+        x_curr = buoy_lats_lons.iloc[time,:]
         x_next = buoy_lats_lons.iloc[time+2,:]
         
         dx_1 = lat_corr_distance((x_prev[1] - x_curr[1]), x_curr[0])
@@ -111,27 +111,34 @@ M_angles.to_csv()
 
 buoy_1 = data.loc[data['ID'] == 34471]
 
-# ## plot of 1 buoy that Ruben made
-# fig = plt.figure()
+## plot of 1 buoy that Ruben made
+fig = plt.figure()
 
-# ax = fig.add_subplot(1,1,1, projection=ccrs.PlateCarree())
-# ax.scatter(buoy_1['Lon'],buoy_1['Lat'], s=2)
-# ax.coastlines()
-# ax.gridlines(draw_labels=True, dms=True)
-# ax.set_extent([west_border, east_border, north_border, south_border])
-# ax.add_feature(cfeature.OCEAN)
-# ax.add_feature(cfeature.LAND)
-# ax.add_feature(cfeature.BORDERS)
-# ax.add_feature(cfeature.COASTLINE)
-# plt.show()
-
-buoy_1_angles = M_angles
-# M_his = M_angles
-# M_his = M_his.dropna(axis = 0)
-# fig2 = plt.figure()
-# plt.hist(M_his, 360)
-# plt.show()
-
-fig2 = plt.figure()
-plt.hist(buoy_1_angles, 360)
+ax = fig.add_subplot(1,1,1, projection=ccrs.PlateCarree())
+ax.scatter(buoy_1['Lon'],buoy_1['Lat'], s=2)
+ax.coastlines()
+ax.gridlines(draw_labels=True, dms=True)
+ax.set_extent([west_border, east_border, north_border, south_border])
+ax.add_feature(cfeature.OCEAN)
+ax.add_feature(cfeature.LAND)
+ax.add_feature(cfeature.BORDERS)
+ax.add_feature(cfeature.COASTLINE)
 plt.show()
+
+# buoy_1_angles = M_angles
+# # M_his = M_angles
+# # M_his = M_his.dropna(axis = 0)
+# # fig2 = plt.figure()
+# # plt.hist(M_his, 360)
+# # plt.show()
+
+# fig2 = plt.figure()
+# plt.hist(M_angles['34471'], 360)
+# plt.show()
+
+# TO DO: zijn hoeken normaal verdeeld ? 
+# paper lezen:
+    # decorrelatie tijdsschaal 
+# hoe kun je deze hoeken gebruiken om iets over diffusie te zeggen ? 
+
+
