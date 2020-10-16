@@ -26,8 +26,20 @@ south_border = 45
 
 def lat_corr_distance(lon_distance, lat):
     corrected = 2 * np.pi * r_e * np.cos(lat * 180 / np.pi ) /360 * lon_distance
-    return corrected
+    return corrected # in m 
 
+def angle_between_vecs(vector1, vector2):
+    x1 = vector1[0]
+    y1 = vector1[1]
+    
+    x2 = vector2[0]
+    y2 = vector2[1]    
+        
+    dot = x1*x2 + y1*y2      # dot product between [x1, y1] and [x2, y2]
+    det = x1*y2 - y1*x2      # determinant
+    angle = np.arctan2(det, dot) * 180 / np.pi  # angle in degrees [-180, 180]
+    
+    return angle
 
 buoy_IDs = np.unique(data["ID"]) # as of current there are about 10 000
 dates = np.unique(data["Date"]) # about 16 000
@@ -37,7 +49,7 @@ M_angles = pd.DataFrame()
 angles_col_np = np.zeros((16000))
 
 # loop through each buoy and then go by time (second for loop)
-for ID in buoy_IDs[:1]:
+for ID in buoy_IDs[:10]:
     current_buoy_data = data.loc[data['ID'] == ID]
     buoy_lats_lons = current_buoy_data[['Lat','Lon']]
      
@@ -64,19 +76,9 @@ for ID in buoy_IDs[:1]:
         dy_2 =( x_next[0] - x_curr[0]) * 2* np.pi * r_e / 360 
         
         vec1 = pd.DataFrame([[dx_1, dy_1]])
-        vec2 = pd.DataFrame([[dx_2, dy_2]])
+        vec2 = pd.DataFrame([[dx_2, dy_2]])        
         
-        # using that the dot product of a,b is defined : a.b = |a||b|cos(angle)
-        # where the angle is the angle between the vectors in this case, we can
-        # exploit this definition by using that angle = arccos(a.b / |a||b|)
-        
-        dot = vec1.dot(vec2.transpose())
-        
-        normalized_dot = dot/ (np.linalg.norm(vec1)*np.linalg.norm(vec2))
-        
-        angle = np.arccos(normalized_dot[0]) * 180 /np.pi 
-
-
+        angle = angle_between_vecs(vec1, vec2)
         
         # angles are stored in a numpy array         
         angles_col_np[time] = angle
