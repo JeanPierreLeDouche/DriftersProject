@@ -25,7 +25,7 @@ north_border = 60
 south_border = 45
 
 def lat_corr_distance(lon_distance, lat):
-    corrected = 2 * np.pi * r_e * np.cos(lat * 180 / np.pi ) /360 * lon_distance
+    corrected =  np.cos(lat * 180 / np.pi )* lon_distance
     return corrected # in m 
 
 def angle_between_vecs(vector1, vector2):
@@ -51,7 +51,7 @@ angles_col_np = np.zeros((16000))
 t1 = perf_counter()
 
 # loop through each buoy and then go by time (second for loop)
-for ID in buoy_IDs[:100]:
+for ID in buoy_IDs[:10]:
     current_buoy_data = data.loc[data['ID'] == ID]
     buoy_lats_lons = current_buoy_data[['Lat','Lon']]
     
@@ -73,8 +73,8 @@ for ID in buoy_IDs[:100]:
         dx_1 = lat_corr_distance((x_prev[1] - x_curr[1]), x_curr[0])
         dx_2 = lat_corr_distance((x_next[1] - x_curr[1]), x_curr[0])
         
-        dy_1 =( x_prev[0] - x_curr[0])* 2* np.pi * r_e / 360
-        dy_2 =( x_next[0] - x_curr[0]) * 2* np.pi * r_e / 360 
+        dy_1 =( x_prev[0] - x_curr[0])
+        dy_2 =( x_next[0] - x_curr[0]) 
         
         vec1 = np.array([dx_1, dy_1])
         vec2 = np.asarray([dx_2, dy_2])
@@ -83,38 +83,55 @@ for ID in buoy_IDs[:100]:
         
         # angles are stored in a numpy array         
         angles_col_np[time] = angle
-   
+        
    
     # after looping through all timesteps for one buoy the numpy array is copied
     # as a pandas series which can then be appended into a pandas DataFrame. 
     # the resulting dataframe has buoy IDs as headers and angles per belonging
     # to this buoy per timestep in each column
+    
+
         
     angles_col_pd = pd.Series(angles_col_np)
+    angles_col_pd = angles_col_pd.mask(angles_col_pd == 0)
+    angles_col_pd = angles_col_pd.dropna(axis = 0)
+    
     M_angles[str(ID)] = angles_col_pd 
+    
 t2 = perf_counter()
 print("calculation took: ", (t2-t1), " seconds")
-print(angles_col_np)
+
 
 # after masking all the trailing zeros we get lists of timestep angles per buoy    
-M_angles = M_angles.mask(M_angles == 0)    
+# M_angles = M_angles.mask(M_angles == 0)    
 M_angles.to_csv()
 
 ###--------------------------------------------------------------------------
-#buoy_1 = data.loc[data['ID'] == 72615]
+#%%
 
-### plot of 1 buoy that Ruben made
-#fig = plt.figure()
-#
-#ax = fig.add_subplot(1,1,1, projection=ccrs.PlateCarree())
-#ax.scatter(buoy_1['Lon'],buoy_1['Lat'], s=2)
-#ax.coastlines()
-#ax.gridlines(draw_labels=True, dms=True)
-#ax.set_extent([west_border, east_border, north_border, south_border])
-#ax.add_feature(cfeature.OCEAN)
-#ax.add_feature(cfeature.LAND)
-#ax.add_feature(cfeature.BORDERS)
-#ax.add_feature(cfeature.COASTLINE)
-#
-#
-#plt.show()
+buoy_1 = data.loc[data['ID'] == 34471]
+
+# ## plot of 1 buoy that Ruben made
+# fig = plt.figure()
+
+# ax = fig.add_subplot(1,1,1, projection=ccrs.PlateCarree())
+# ax.scatter(buoy_1['Lon'],buoy_1['Lat'], s=2)
+# ax.coastlines()
+# ax.gridlines(draw_labels=True, dms=True)
+# ax.set_extent([west_border, east_border, north_border, south_border])
+# ax.add_feature(cfeature.OCEAN)
+# ax.add_feature(cfeature.LAND)
+# ax.add_feature(cfeature.BORDERS)
+# ax.add_feature(cfeature.COASTLINE)
+# plt.show()
+
+buoy_1_angles = M_angles
+# M_his = M_angles
+# M_his = M_his.dropna(axis = 0)
+# fig2 = plt.figure()
+# plt.hist(M_his, 360)
+# plt.show()
+
+fig2 = plt.figure()
+plt.hist(buoy_1_angles, 360)
+plt.show()
