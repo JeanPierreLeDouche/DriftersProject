@@ -50,16 +50,14 @@ for ID in buoy_IDs[:0]:
         x_current = buoy_lats_lons.iloc[time+1,:]
         x_next = buoy_lats_lons.iloc[time+2,:]
         
-        
-        vec1 = x_current-x_previous
-        vec2 = x_next - x_current
-        
-        
+        vec1 = np.asarray(x_current - x_previous)
+        vec2 = np.asarray(x_next - x_current)
+            
         # using that the dot product of a,b is defined : a.b = |a||b|cos(angle)
         # where the angle is the angle between the vectors in this case, we can
         # exploit this definition by using that angle = arccos(a.b / |a||b|)
         
-        dot = vec1.dot(vec2.transpose())
+        dot = np.dot(vec2, vec1)
         
         normalized_dot = dot/ (np.linalg.norm(vec1)*np.linalg.norm(vec2))
         
