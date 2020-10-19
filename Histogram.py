@@ -132,17 +132,35 @@ print("calculation took: ", (t2 - t1), " seconds")
 # # # plt.hist(M_his, 360)
 # # # plt.show()
 #
-plt.figure()
-plt.hist(angles_col_np, 360)
+
+
+x = np.arange(-180,181,1)
+a_fit, b_fit = sc.laplace.fit(angles_col_np)
+print(a_fit,b_fit)
+y = sc.laplace(scale = b_fit)
+
+
+weights = np.ones_like(angles_col_np) / len(angles_col_np)
+
+
+fig,(ax1, ax2) = plt.subplots(1,2, sharey=True)
+ax2.plot(x, y.pdf(x))
+ax2.set_xlabel('Angle (Degrees)')
+ax2.set_ylabel('Normalized frequency')
+
+
+ax1.hist(angles_col_np, 360, weights=weights)
+ax1.set_xlabel('Angle (Degrees)')
+ax1.set_ylabel('Normalized frequency')
+
 plt.show()
+
 #
 # # TO DO: zijn hoeken normaal verdeeld ?
 # # paper lezen:
 # # decorrelatie tijdsschaal
 # # hoe kun je deze hoeken gebruiken om iets over diffusie te zeggen ?
 
-z, p = sc.normaltest(angles_col_np)
-print(f'The p-value is: {p}, which means that the hypothesis that this distribution is not a normal distribution')
 
 
 
