@@ -9,7 +9,7 @@ import numpy.ma as ma
 
 r_e = 6371 * 1e3 #m 
 
-data = pickle.load(open("BuoyDatabase.p", "rb"))
+data = pickle.load(open(r"C:\Users\Gebruiker\Documents\Climate_Physics\Year2\MAIO\Driftersproject\buoydata.p", "rb"))
 
 # print(data.head())
 
@@ -37,21 +37,32 @@ def angle_between_vecs(vector1, vector2):
     
     return angle
 
+def tau(delta, psi):
+    return delta/(1-psi)
+
+def diffusion(v, delta, psi, n=2 ):
+    return (1./n) * ((v**2 * delta) /(1 - psi) )
+
 buoy_IDs = np.unique(data["ID"]) # as of current there are about 10 000
 dates = np.unique(data["Date"]) # about 16 000
 
 # initialize list where all the angles will go and one temp array
-# M_angles = pd.DataFrame()
-# M_angles = np.ndarray(buoy_IDs.shape[0], dtype=object)
+
 M_angles = np.zeros((10000, 16000 ))
 
 t1 = perf_counter()
 ID_counter = 0
 
+L_angles = []
+L_speeds = []
+
+
 # loop through each buoy and then go by time (second for loop)
-for ID in buoy_IDs[:100]:
+for ID in buoy_IDs:
     current_buoy_data = data.loc[data['ID'] == ID]
     buoy_lats_lons = current_buoy_data[['Lat','Lon']]
+    buoy_speed = current_buoy_data[['SPD(CM/S)']]
+    avg_speed = buoy_speed.mean()
     
     x_previous = np.array([0,0])
     x_current = np.array([0,0])
@@ -78,12 +89,13 @@ for ID in buoy_IDs[:100]:
         vec1 = np.array([dx_1, dy_1])
         vec2 = np.asarray([dx_2, dy_2])
         
-        angle = angle_between_vecs(vec1, vec2)
-        
+        angle = angle_between_vecs(vec1, vec2) * np.pi/180
         # angles are stored in a numpy array         
         angles_col[time] = angle
-        
+        L_angles.append(angle)
+           
     angles_col = np.trim_zeros(angles_col)
+    L_speeds.append(avg_speed)
     
     # after looping through all timesteps for one buoy the numpy array is copied
     # as a pandas series which can then be appended into a pandas DataFrame. 
@@ -96,25 +108,34 @@ for ID in buoy_IDs[:100]:
 t2 = perf_counter()
 print("calculation took: ", (t2-t1), " seconds")
 
-t3 = perf_counter()
+#%%
+# calculate total psi 
+ensemble_psi = np.mean(np.ma.masked_invalid(np.asarray(np.cos(L_angles))))
 
-zeros_count = 0
-for i in range(M_angles.shape[0]):
-    for j in range(M_angles.shape[1]):
-        if M_angles[i,j] == 0:
-            M_angles[i,j] = None
-            zeros_count = zeros_count + 1
-            
-print("counted: ", zeros_count, "zeros")
+# calculate average cos(angle) per buoy
+buoys_psi_list = []
+for i in enumerate(buoy_IDs):
+    one_buoy = np.asarray(M_angles[i[0],:])    
+    one_buoy = np.trim_zeros(one_buoy)
+    avg = np.mean(one_buoy)
+    buoys_psi_list.append(np.cos(avg))
+        
+# calculate psi per buoy
+speeds = np.asarray(L_speeds)/100
 
-t4= perf_counter() 
-print("dealing with the zeros took:", (t4 - t3), " seconds")
+# correlation timescale tau
+ensemble_tau = tau(6 * 3600, ensemble_psi)
+per_buoy_tau = tau(6 * 3600, np.asarray(buoys_psi_list))
 
-# after masking all the trailing zeros we get lists of timestep angles per buoy    
-# M_angles = M_angles.mask(M_angles == 0)    
-# M_angles.to_csv()
+# diffusion D
+ensemble_D = diffusion(np.mean(speeds), 6 * 3600, ensemble_psi)
+buoys_D = diffusion(speeds, 6 * 3600, np.asarray(buoys_psi_list))
 
 ###--------------------------------------------------------------------------
+# plt.hist(avg_angle_list*180/np.pi, bins = 360, color='blue')
+# plt.hist(total_avg, 360, color ='r')
+
+
 #%%
 
 # buoy_1 = data.loc[data['ID'] == 34471]
@@ -135,39 +156,39 @@ print("dealing with the zeros took:", (t4 - t3), " seconds")
 
 #%%
 
-plt.hist(M_angles, 360)
+# plt.hist(M_angles, 360)
 
 
-=======
-#Data before filtering
-print(data.shape)
+# =======
+# #Data before filtering
+# print(data.shape)
 
-#Filtering data
+# #Filtering data
 
-data = data.loc[data['Lat'] > south_border]
-data = data.loc[data['Lat'] < north_border]
-data = data.loc[data['Lon'] > west_border]
-data = data.loc[data['Lon'] < east_border]
+# data = data.loc[data['Lat'] > south_border]
+# data = data.loc[data['Lat'] < north_border]
+# data = data.loc[data['Lon'] > west_border]
+# data = data.loc[data['Lon'] < east_border]
 
-#Data after filtering
-print(data.shape)
+# #Data after filtering
+# print(data.shape)
 
-#Checking the amount of different buoys in the area
-print(f'The amount of buoys in the area is: {len(set(data["ID"]))}')
+# #Checking the amount of different buoys in the area
+# print(f'The amount of buoys in the area is: {len(set(data["ID"]))}')
 
-# buoy_1 = data.loc[data['ID'] == 72615]
-#
-# fig = plt.figure()
-#
-# ax = fig.add_subplot(1,1,1, projection=ccrs.PlateCarree())
-# ax.scatter(buoy_1['Lon'],buoy_1['Lat'], s=2)
-# ax.coastlines()
-# ax.gridlines(draw_labels=True, dms=True)
-# ax.set_extent([west_border, east_border, north_border, south_border])
-# ax.add_feature(cfeature.OCEAN)
-# ax.add_feature(cfeature.LAND)
-# ax.add_feature(cfeature.BORDERS)
-# ax.add_feature(cfeature.COASTLINE)
-#
-#
-# plt.show()
+# # buoy_1 = data.loc[data['ID'] == 72615]
+# #
+# # fig = plt.figure()
+# #
+# # ax = fig.add_subplot(1,1,1, projection=ccrs.PlateCarree())
+# # ax.scatter(buoy_1['Lon'],buoy_1['Lat'], s=2)
+# # ax.coastlines()
+# # ax.gridlines(draw_labels=True, dms=True)
+# # ax.set_extent([west_border, east_border, north_border, south_border])
+# # ax.add_feature(cfeature.OCEAN)
+# # ax.add_feature(cfeature.LAND)
+# # ax.add_feature(cfeature.BORDERS)
+# # ax.add_feature(cfeature.COASTLINE)
+# #
+# #
+# # plt.show()
