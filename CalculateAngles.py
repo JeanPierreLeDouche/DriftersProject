@@ -59,7 +59,7 @@ L_speeds = []
 
 # loop through each buoy and then go by time (second for loop)
 for ID in buoy_IDs:
-    current_buoy_data = data.loc[data['ID'] == ID]
+    current_buoy_data = data.loc[data['ID'] == ID]  
     buoy_lats_lons = current_buoy_data[['Lat','Lon']]
     buoy_speed = current_buoy_data[['SPD(CM/S)']]
     avg_speed = buoy_speed.mean()
@@ -117,6 +117,7 @@ buoys_psi_list = []
 for i in enumerate(buoy_IDs):
     one_buoy = np.asarray(M_angles[i[0],:])    
     one_buoy = np.trim_zeros(one_buoy)
+
     avg = np.mean(one_buoy)
     buoys_psi_list.append(np.cos(avg))
         
@@ -135,6 +136,20 @@ buoys_D = diffusion(speeds, 6 * 3600, np.asarray(buoys_psi_list))
 # plt.hist(avg_angle_list*180/np.pi, bins = 360, color='blue')
 # plt.hist(total_avg, 360, color ='r')
 
+#%%
+
+plt.figure()
+plt.hist(np.asarray(L_angles) * 180/np.pi, 360)
+plt.show()
+
+#%%
+
+plt.figure()
+plt.hist(np.log10(per_buoy_tau), 50)
+plt.hist(np.log10(ensemble_tau), 50, color = 'r')
+plt.ylabel('frequency')
+plt.xlabel(r'log ($\tau$)')
+plt.show()
 
 #%%
 
