@@ -1,14 +1,14 @@
 TODO list MAIO:
 
 Praktisch:
-- werkend histogram maken van alle data
+x- werkend histogram maken van alle data
 	voorstel: 1 lange lijst met alle hoeken 
-- checken voor normale verdeling
+x- checken voor normale verdeling
 
-- data reader updaten om discontinue data weg te halen
+x- data reader updaten om discontinue data weg te halen
 
 Theorie:
-- paper lezen:
+x- paper lezen:
 	- wat is de decorrelatie tijdsschaal 
 
-- hoe kun je deze hoeken gebruiken om iets over diffusie te zeggen ? 
+x- hoe kun je deze hoeken gebruiken om iets over diffusie te zeggen ? 

@@ -147,7 +147,7 @@ print('For longitudes between', west_border, 'and', east_border)
 # fit normal and laplace distributions
 x = np.arange(-180,181,1)
 a_fit, b_fit = sc.laplace.fit(np.asarray(L_angles) * 180/np.pi)
-norm_a, norm_b = sc.norm.fit(np.asarray(L_angles) *180/np.pi)
+norm_a, norm_b = sc.norm.fit(np.asarray(L_angles) *180/np.pi) # see if we can make this better
 y = sc.laplace(scale = b_fit)
 y_norm = sc.norm(norm_a, norm_b)
 # weights = np.ones_like(np.asarray(L_angles) / len(L_angles))
@@ -157,7 +157,8 @@ y_norm = sc.norm(norm_a, norm_b)
 plt.figure()
 plt.ylabel('frequency')
 plt.xlabel(r'Angle ($\theta$)')
-plt.hist(np.asarray(L_angles) * 180/np.pi, 360, density = True, stacked =True)
+plt.hist(np.asarray(L_angles) * 180/np.pi, 360, density = True, stacked =True) # check if normalization is done correctly
+
 
 plt.plot(x, y.pdf(x), color = 'r')
 plt.plot(x, y_norm.pdf(x), color = 'y')
@@ -173,7 +174,7 @@ plt.title('Correlation timescale')
 plt.hist(np.log10(buoys_tau), 50)
 plt.hist(np.log10(ensemble_tau), 50, color = 'r')
 plt.ylabel('frequency')
-plt.xlabel(r'log ($\tau$)')
+plt.xlabel(r'log ($\tau$)')  #units!
 plt.show()
 
 #%%
@@ -185,5 +186,4 @@ plt.hist(np.log10(ensemble_D),15, color = 'r')
 plt.ylabel('frequency')
 plt.xlabel(r'log (D)')
 plt.show()
-
 
