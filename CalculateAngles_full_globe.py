@@ -9,10 +9,7 @@ import numpy.ma as ma
 import scipy.stats as sc
 
 r_e = 6371 * 1e3 #m 
-
 data = pickle.load(open(r"C:\Users\Gebruiker\Documents\Climate_Physics\Year2\MAIO\Driftersproject\ALL_buoydata.p", "rb"))
-
-
 
 def lat_corr_distance(lon_distance, lat):    
     # circles of equal latitude become smaller towards the poles therefore we need
@@ -36,20 +33,21 @@ def angle_between_vecs(vector1, vector2):
 
 def tau(delta, psi):
     # from Visser 2008
-    # if psi == 0:
-    #     value = ''
-    # else:
-    value = delta/(1-psi)   
+    if psi.any() == 0:
+        value = ''
+    else:
+        value = delta/(1-psi)   
     return value
 
 # as defined in Visser 2008
 def diffusion(v, delta, psi, n=2 ):
-    # from Visser 2008
-    # if psi == 0:
-    #     value = ''
-    # else: 
-    value = (1./n) * ((v**2 * delta) /(1 - psi) )
+   # from Visser 2008
+    if psi.any() == 0:
+        value = ''
+    else: 
+        value = (1./n) * ((v**2 * delta) /(1 - psi) )
     return value
+
 
 buoy_IDs = np.unique(data["ID"]) 
 
@@ -58,7 +56,6 @@ t1 = perf_counter()
 L_angles = []
 L_speeds = []
 
-
 # create two grids that are 180 lists that contain 360 lists that contain a 
 # single list. Using np.array is not suited because this asks for fixed
 # "depth" of the grid which is variable in this application
@@ -66,16 +63,15 @@ L_speeds = []
 lat_points = 180
 lon_points = 360
   
-angles_grid = [[[] for x in range(lon_points+1)] for x in range(lat_points+1)] 
-speeds_grid = [[[] for x in range(lon_points+1)] for x in range(lat_points+1)] 
-
+angles_grid = [[[] for x in range(lon_points)] for x in range(lat_points+1)] 
+speeds_grid = [[[] for x in range(lon_points)] for x in range(lat_points+1)] 
 
 # loop through each buoy and then go by time (second for loop)
-for ID in enumerate(buoy_IDs[:100]):
+for ID in enumerate(buoy_IDs[:1000]):
     current_buoy_data = data.loc[data['ID'] == ID[1]]  
     buoy_lons_lats = current_buoy_data[['Lon', 'Lat']]
     buoy_speed = current_buoy_data[['SPD(CM/S)']]
-    
+    print(ID[1])
     x_previous = np.array([0,0])
     x_current = np.array([0,0])
     x_next = np.array([0,0])
@@ -105,16 +101,22 @@ for ID in enumerate(buoy_IDs[:100]):
         dy_2 = (x_next[1] - x_curr[1]) 
         
         vec1 = np.array([dx_1, dy_1])
-        vec2 = np.asarray([dx_2, dy_2])
+        vec2 = np.array([dx_2, dy_2])
         
         angle = angle_between_vecs(vec1, vec2) # in radians
         
         # lats and lons are rounded down to their nearest integer
         lon = int(x_prev[0]) 
         lat = int(x_prev[1])
-
-        angles_grid[lat][lon].append(angle)
-        speeds_grid[lat][lon].append(v_curr)
+        
+        # new_lat = (lat - 90)*-1
+        # new_lon = (lon+180)%360
+        
+        new_lat = lat + 90
+        new_lon = lon
+        
+        angles_grid[new_lat][new_lon].append(angle)
+        speeds_grid[new_lat][new_lon].append(v_curr)
     
     # diagnostics 
     
@@ -141,16 +143,22 @@ print(" angles calculation took: ", (t2-t1), " seconds")
 psi_grid = np.zeros((180,360))
 avg_speed_grid = np.zeros((180,360))
 
-for lat in range(-90 , 90):
+for lat in range(0 , 180):
     for lon in range(0, 360): 
 
         angle_grid_point_slice = np.asarray(angles_grid[lat][lon])
-        phi = np.mean(np.cos(angle_grid_point_slice))
-        psi_grid[lat+90][lon] = phi
+        if angle_grid_point_slice.any() == True:
+            phi = np.mean(np.cos(angle_grid_point_slice))
+        else: 
+            phi = np.NaN
+        psi_grid[lat][lon] = phi
 
         speed_grid_point_slice = np.asarray(speeds_grid[lat][lon])
-        avg_speed = np.mean(speed_grid_point_slice)
-        avg_speed_grid[lat+90][lon] = avg_speed/100
+        if speed_grid_point_slice.any() == True:
+            avg_speed = np.mean(speed_grid_point_slice)
+        else: 
+            avg_speed = np.NaN
+        avg_speed_grid[lat][lon] = avg_speed/100
 
 # using the psi and avg. v values for the full grid we calculate tau and D
 # for the full grid
@@ -165,20 +173,28 @@ east_border = 50
 north_border = -19
 south_border = -49
 
-lon = np.linspace(-180, 180, 360)
+lon = np.linspace(0,360 , 360)
 lat = np.linspace(-90, 90, 180)
 
-ax = plt.axes(projection=ccrs.PlateCarree())
-ax.coastlines()
-ax.legend()
-ax.set_global()
-ax.contourf(lon, lat, tau_grid)
+data_crs = ccrs.PlateCarree()
 
-# plt.figure()
-# plt.title('Correlation timescale')
-# plt.contourf(tau_grid)
-# plt.colorbar()
-# plt.show()
+ax = plt.axes(projection=ccrs.PlateCarree())
+ax.set_title(r'$\psi$ ')
+ax.coastlines()
+# ax.legend()
+ax.set_global()
+ax.gridlines(crs=ccrs.PlateCarree(), linewidth=0.5, color='black', 
+    draw_labels=True, alpha=0.5, linestyle='--')
+ax.contourf(lon, lat, psi_grid, transform=data_crs, color = 'red')
+
+
+#%%
+
+plt.figure()
+plt.title('Correlation timescale')
+plt.contourf(tau_grid)
+plt.colorbar()
+plt.show()
 
 # plt.figure()
 # plt.title('Diffusivity')
