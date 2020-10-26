@@ -8,13 +8,14 @@ from time import perf_counter
 import numpy.ma as ma
 import scipy.stats as sc
 import statsmodels.api as sm
+from scipy.stats import norm
+import scipy
+
 
 # n = 100  # number of buoys to be calculated
 
 data = pickle.load(
-    open(r"C:\Users\Ruben\Documents\CLPH\MAIO\ALL_buoydata.p", "rb"))
-
-
+    open(r'C:\Users\Gebruiker\Documents\Climate_Physics\Year2\MAIO\Driftersproject\ALL_buoydata.p', "rb"))
 
 def bearing_angle(p1, p2):
     Y = np.sin((p2[0] - p1[0])*(np.pi/180)) * np.cos(p2[1]*(np.pi/180))
@@ -61,7 +62,7 @@ angles_grid = [[[] for x in range(lon_points)] for x in range(lat_points + 1)]
 speeds_grid = [[[] for x in range(lon_points)] for x in range(lat_points + 1)]
 
 # loop through each buoy and then go by time (second for loop)
-for ID in enumerate(buoy_IDs[0:100]):
+for ID in enumerate(buoy_IDs[0:10]):
     print(ID[0])
     current_buoy_data = data.loc[data['ID'] == ID[1]]
     buoy_lons_lats = current_buoy_data[['Lon', 'Lat']]
@@ -134,25 +135,6 @@ for ID in enumerate(buoy_IDs[0:100]):
     # angles = np.asarray(angles)
     # angles = np.cos(angles*(np.pi/180))
     # angles = np.mean(angles)
-
-
-    print(f'The mean of the cosines is: {angles}')
-    # diagnostics
-
-    if ID[0] == 1000:
-        t11 = perf_counter()
-        print('1000 buoys calculated after: ', (t11 - t1), ' seconds')
-    if ID[0] == 2500:
-        t12 = perf_counter()
-        print('2500 buoys calculated after: ', (t12 - t1), ' seconds')
-    if ID[0] == 5000:
-        t13 = perf_counter()
-        print('5000 buoys calculated after: ', (t13 - t1), ' seconds')
-    if ID[0] == 7500:
-        t14 = perf_counter()
-        print('7500 buoys calculated after: ', (t14 - t1), 'seconds')
-
-
 
 t2 = perf_counter()
 print(" angles calculation took: ", (t2 - t1), " seconds")
@@ -269,31 +251,28 @@ y = []
 
 # ### ---------------------------------------------------------------------------
 #
-# # # fit normal and laplace distributions
-# x = np.arange(-180,181,1)
-# # # a_fit, b_fit = sc.laplace.fit(np.asarray(L_angles) * 180/np.pi)
-# norm_a, norm_b = sc.norm.fit(np.asarray(L_ang)) # see if we can make this better
-# # # y = sc.laplace(scale = b_fit)
-# y_norm = sc.norm(norm_a, norm_b)
-#
-# # #%%
-#
-# plt.figure()
-# plt.ylabel('frequency')
-# plt.xlabel(r'Angle ($\theta$)')
-# plt.hist(np.asarray(L_ang), 360, density = True, stacked =True) # check if normalization is done correctly
-# plt.plot(x, y_norm.pdf(x), color = 'r')
+#%%
+# # fit normal distributions
+x = np.arange(-180,181,1)
+norm_a, norm_b = sc.norm.fit(np.asarray(L_ang)) # see if we can make this better
+y_norm = sc.norm(norm_a, norm_b)
+
+plt.figure()
+plt.ylabel('frequency')
+plt.xlabel(r'Angle ($\theta$)')
+plt.hist(np.asarray(L_ang), 360, density = True, stacked =True) # check if normalization is done correctly
+plt.plot(x, y_norm.pdf(x), color = 'r')
 # plt.show()
-#
-# # plt.plot(x, y.pdf(x), color = 'r')
-#
-# # plt.legend(['Fitted normal distribution', 'Data'])
-# #
-# # plt.show()
-# #
-# s, p = sc.normaltest(L_ang)
-#
-# print(p)
+
+plt.plot(x, y.pdf(x), color = 'r')
+
+plt.legend(['Fitted normal distribution', 'Data'])
+
+plt.show()
+
+s, p = sc.normaltest(L_ang)
+print(p)
+
 
 # #%%_________________________________________________________________________________________________
 
