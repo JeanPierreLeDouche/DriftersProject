@@ -65,7 +65,7 @@ angles_grid = [[[] for x in range(lon_points)] for x in range(lat_points+1)]
 speeds_grid = [[[] for x in range(lon_points)] for x in range(lat_points+1)] 
 
 # loop through each buoy and then go by time (second for loop)
-for ID in enumerate(buoy_IDs[:2]):
+for ID in enumerate(buoy_IDs[:10]):
     current_buoy_data = data.loc[data['ID'] == ID[1]]  
     buoy_lons_lats = current_buoy_data[['Lon', 'Lat']]
     buoy_speed = current_buoy_data[['SPD(CM/S)']]

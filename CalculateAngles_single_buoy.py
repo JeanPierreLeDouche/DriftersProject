@@ -11,15 +11,29 @@ import scipy.stats as sc
 n = 100 # number of buoys to be calculated
 
 r_e = 6371 * 1e3 #m 
+circ_e = 2 * np.pi * r_e
+circ_e_per_deg =  circ_e/360
+
 data = pickle.load(open(r"C:\Users\Gebruiker\Documents\Climate_Physics\Year2\MAIO\Driftersproject\ALL_buoydata.p", "rb"))
 
 def lat_corr_distance(lon_distance, lat):    
     # circles of equal latitude become smaller towards the poles therefore we need
     # to correct for this when calculating absolute distances from distances between
     # longitudes
-    corrected =  np.cos(lat * 180 / np.pi )* lon_distance
-    return corrected # in m 
-
+    corrected =  (r_e * np.cos(lat * np.pi / 180 ) * 2 * np.pi) / 360 * lon_distance
+    return corrected # in m
+ 
+def bearing(point1, point2):
+    #phi,labda
+    
+    
+    x = np.sin(point2[0] - point1[0]) * np.cos(point2[1])  
+    y = np.cos(point1[1]) * np.sin(point2[1]) - np.sin(point1[1]) * np.cos(point2[1]) * np.cos((point2[0]-point1[0]) )
+    theta = np.arctan2(y,x)
+    bear = (theta * 180 /np.pi + 360) % 360 
+    
+    return bear
+   
 def angle_between_vecs(vector1, vector2):
     x1 = vector1[0]
     y1 = vector1[1]
@@ -70,7 +84,7 @@ speeds_grid = [[[] for x in range(lon_points)] for x in range(lat_points+1)]
 # loop through each buoy and then go by time (second for loop)
 for ID in enumerate(buoy_IDs[1:2]):
     current_buoy_data = data.loc[data['ID'] == ID[1]]  
-    buoy_lons_lats = current_buoy_data[['Lon', 'Lat']]
+    buoy_lons_lats = np.asarray(current_buoy_data[['Lon', 'Lat' ]])
     buoy_speed = current_buoy_data[['SPD(CM/S)']]
     x_previous = np.array([0,0])
     x_current = np.array([0,0])
@@ -90,20 +104,14 @@ for ID in enumerate(buoy_IDs[1:2]):
         # first to second and from second to third, giving two consecutive 
         # vectors 
         
-        x_prev = buoy_lons_lats.iloc[time+1,:]
-        x_curr = buoy_lons_lats.iloc[time,:]
-        x_next = buoy_lons_lats.iloc[time+2,:]
+        x_prev = buoy_lons_lats[time,:]
+        x_curr = buoy_lons_lats[time+1,:]
+        x_next = buoy_lons_lats[time+2,:]
         
-        dx_1 = lat_corr_distance((x_prev[0] - x_curr[0]), x_curr[1])
-        dx_2 = lat_corr_distance((x_next[0] - x_curr[0]), x_curr[1])
-        
-        dy_1 = (x_prev[1] - x_curr[1])
-        dy_2 = (x_next[1] - x_curr[1]) 
-        
-        vec1 = np.array([dx_1, dy_1])
-        vec2 = np.array([dx_2, dy_2])
-        
-        angle = angle_between_vecs(vec1, vec2) # in radians
+        bear_1 =  bearing(x_prev, x_curr)
+        bear_2 = bearing(x_curr, x_next)
+
+        angle = bear_2 - bear_1 # in radians
         
         # lats and lons are rounded down to their nearest integer
         lon = int(x_prev[0]) 
@@ -117,21 +125,6 @@ for ID in enumerate(buoy_IDs[1:2]):
         
         L_pos.append(x_prev)
         L_ang.append(angle)
-        
-    # diagnostics 
-    
-    if ID[0]==1000:
-        t11 = perf_counter()
-        print('1000 buoys calculated after: ', (t11-t1), ' seconds' )
-    if ID[0] == 2500:
-        t12 = perf_counter()
-        print('2500 buoys calculated after: ', (t12-t1), ' seconds')
-    if ID[0] == 5000:
-        t13 = perf_counter()
-        print('5000 buoys calculated after: ', (t13-t1), ' seconds')
-    if ID[0] == 7500: 
-        t14 = perf_counter()
-        print('7500 buoys calculated after: ', (t14-t1), 'seconds')
         
 t2 = perf_counter()
 print(" angles calculation took: ", (t2-t1), " seconds")
@@ -156,18 +149,16 @@ ax1.text(x[0], y[0], 'start')
 ax1.scatter(x[0], y[0], color = 'green')
 ax1.text(x[len(x)-1], y[len(y)-1], 'end')
 ax1.scatter(x[len(x)-1], y[len(y)-1], color = 'r')
-for i in range(1,len(x)-1):
-    ax1.text(x[i], y[i], str(i))
+
+for i in range(1,len(x)-2):
+    ax1.text(x[i+1], y[i+1], str( np.around(L_ang[i] , 0)))
+
 ax1.set_ylim(36.8,37.6)
 ax1.set_xlim(161.5, 162)
 plt.show()
 
-ax2 = plt.scatter(range(len(L_ang[:11])), (np.asarray(L_ang[:11])*180/np.pi), ls='-.', lw = 3)
-plt.title('Angles')
-plt.ylabel(r'Angle ($\degree$)')
-plt.xlabel('step #')
 
-plt.show()
+
 #%%
 
 # plt.figure()
