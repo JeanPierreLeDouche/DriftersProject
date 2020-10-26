@@ -1,14 +1,18 @@
+
 import pandas as pd
 import numpy as np
 import pickle
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
-import cartopy.feature as cfeature
 from time import perf_counter
-import numpy.ma as ma
-import scipy.stats as sc
+from mpi4py import MPI
 
-n = 100 # number of buoys to be calculated
+### intiate parallel things
+comm = MPI.COMM_WORLD
+my_rank = comm.Get_rank()
+p = comm.Get_size()
+
+n = 4**5 # number of buoys to be calculated
 
 r_e = 6371 * 1e3 #m 
 data = pickle.load(open(r"C:\Users\Gebruiker\Documents\Climate_Physics\Year2\MAIO\Driftersproject\ALL_buoydata.p", "rb"))
@@ -65,7 +69,7 @@ angles_grid = [[[] for x in range(lon_points)] for x in range(lat_points+1)]
 speeds_grid = [[[] for x in range(lon_points)] for x in range(lat_points+1)] 
 
 # loop through each buoy and then go by time (second for loop)
-for ID in enumerate(buoy_IDs[:2]):
+for ID in enumerate(buoy_IDs[my_rank*(n/p):(my_rank+1)*(n/p)]):
     current_buoy_data = data.loc[data['ID'] == ID[1]]  
     buoy_lons_lats = current_buoy_data[['Lon', 'Lat']]
     buoy_speed = current_buoy_data[['SPD(CM/S)']]
@@ -117,21 +121,23 @@ for ID in enumerate(buoy_IDs[:2]):
     
     # diagnostics 
     
-    if ID[0]==1000:
-        t11 = perf_counter()
-        print('1000 buoys calculated after: ', (t11-t1), ' seconds' )
-    if ID[0] == 2500:
-        t12 = perf_counter()
-        print('2500 buoys calculated after: ', (t12-t1), ' seconds')
-    if ID[0] == 5000:
-        t13 = perf_counter()
-        print('5000 buoys calculated after: ', (t13-t1), ' seconds')
-    if ID[0] == 7500: 
-        t14 = perf_counter()
-        print('7500 buoys calculated after: ', (t14-t1), 'seconds')
-        
+
+
 t2 = perf_counter()
 print(" angles calculation took: ", (t2-t1), " seconds")
+
+results = [[] for x in range(p)]    
+results[0] = angles_grid, speeds_grid
+
+if my_rank != 0:
+    results =  angles_grid, speeds_grid
+    print( "sent results from", my_rank, 'to 0') 
+    comm.send(results, dest = 0)
+else:
+    for procid in range(1,p):
+        results[procid] = comm.recv(source=procid)
+        print('received results from: ', procid)
+        
 
 #%%
 
@@ -146,8 +152,7 @@ for lat in range(0 , 180):
 
         angle_grid_point_slice = np.asarray(angles_grid[lat][lon])
         if angle_grid_point_slice.any() == True:
-            phi = np.mean(np.cos(angle_grid_point_slice)) #(!), actually autocorrelation between angle at t and t + delta 
-            # mean of lag 1 autocorrelation (?)
+            phi = np.mean(np.cos(angle_grid_point_slice))
         else: 
             phi = np.NaN
         psi_grid[lat][lon] = phi
@@ -193,17 +198,22 @@ ax.contourf(lon, lat, psi_grid, transform=data_crs, color = 'red')
 
 #%%
 
-# plt.figure()
-# plt.title('Correlation timescale')
-# plt.contourf(tau_grid)
-# plt.colorbar()
-# plt.show()
+plt.figure()
+plt.title('Correlation timescale')
+plt.contourf(tau_grid)
+plt.colorbar()
+plt.show()
 
 # plt.figure()
 # plt.title('Diffusivity')
 # plt.contourf(D_grid)
 # plt.colorbar()
 # plt.show()
+
+MPI.MPI_Finalize()
+
+
+
 
 ###---------------------------------------------------------------------------
 " below here should be all post processing stuff that is omitted for speed"

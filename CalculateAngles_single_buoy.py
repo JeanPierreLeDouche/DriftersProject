@@ -58,6 +58,9 @@ t1 = perf_counter()
 # single list. Using np.array is not suited because this asks for fixed
 # "depth" of the grid which is variable in this application
 
+L_pos =[]
+L_ang = []
+
 lat_points = 180
 lon_points = 360
   
@@ -65,7 +68,7 @@ angles_grid = [[[] for x in range(lon_points)] for x in range(lat_points+1)]
 speeds_grid = [[[] for x in range(lon_points)] for x in range(lat_points+1)] 
 
 # loop through each buoy and then go by time (second for loop)
-for ID in enumerate(buoy_IDs[:2]):
+for ID in enumerate(buoy_IDs[1:2]):
     current_buoy_data = data.loc[data['ID'] == ID[1]]  
     buoy_lons_lats = current_buoy_data[['Lon', 'Lat']]
     buoy_speed = current_buoy_data[['SPD(CM/S)']]
@@ -106,15 +109,15 @@ for ID in enumerate(buoy_IDs[:2]):
         lon = int(x_prev[0]) 
         lat = int(x_prev[1])
         
-        # new_lat = (lat - 90)*-1
-        # new_lon = (lon+180)%360
-        
         new_lat = lat + 90
         new_lon = lon
         
         angles_grid[new_lat][new_lon].append(angle)
         speeds_grid[new_lat][new_lon].append(v_curr)
-    
+        
+        L_pos.append(x_prev)
+        L_ang.append(angle)
+        
     # diagnostics 
     
     if ID[0]==1000:
@@ -135,62 +138,36 @@ print(" angles calculation took: ", (t2-t1), " seconds")
 
 #%%
 
-# calculating psi and average speeds at every gridpoint
-t3 = perf_counter()
+x = []
+y = []
 
-psi_grid = np.zeros((180,360))
-avg_speed_grid = np.zeros((180,360))
-
-for lat in range(0 , 180):
-    for lon in range(0, 360): 
-
-        angle_grid_point_slice = np.asarray(angles_grid[lat][lon])
-        if angle_grid_point_slice.any() == True:
-            phi = np.mean(np.cos(angle_grid_point_slice)) #(!), actually autocorrelation between angle at t and t + delta 
-            # mean of lag 1 autocorrelation (?)
-        else: 
-            phi = np.NaN
-        psi_grid[lat][lon] = phi
-
-        speed_grid_point_slice = np.asarray(speeds_grid[lat][lon])
-        if speed_grid_point_slice.any() == True:
-            avg_speed = np.mean(speed_grid_point_slice)
-        else: 
-            avg_speed = np.NaN
-        avg_speed_grid[lat][lon] = avg_speed/100
-
-# using the psi and avg. v values for the full grid we calculate tau and D
-# for the full grid
-        
-tau_grid = tau(6*3600, psi_grid)
-D_grid = diffusion(avg_speed_grid, 6 * 3600, psi_grid)
-
-t4 = perf_counter()
-
-print('calculating psi, average speeds, tau, D in: ', (t4-t3), 'seconds ')
-
-#%%
-# Box with sea of South Africa, for reproducing Rühs 2018
-west_border = 10
-east_border = 50
-north_border = -19
-south_border = -49
-
-lon = np.linspace(0,360 , 360)
-lat = np.linspace(-90, 90, 180)
-
-data_crs = ccrs.PlateCarree()
-
-ax = plt.axes(projection=ccrs.PlateCarree())
-ax.set_title(r'$\psi$ ')
-ax.coastlines()
-# ax.legend()
-ax.set_global()
-ax.gridlines(crs=ccrs.PlateCarree(), linewidth=0.5, color='black', 
-    draw_labels=True, alpha=0.5, linestyle='--')
-ax.contourf(lon, lat, psi_grid, transform=data_crs, color = 'red')
+for i in range(len(L_pos)):
+    x.append(L_pos[i][0])
+    y.append(L_pos[i][1])
+    
+x = x[:11]
+y = y[:11]    
 
 
+ax1 = plt.axes(projection=ccrs.PlateCarree())
+ax1.coastlines()
+ax1.plot(x, y)
+ax1.text(x[0], y[0], 'start')
+ax1.scatter(x[0], y[0], color = 'green')
+ax1.text(x[len(x)-1], y[len(y)-1], 'end')
+ax1.scatter(x[len(x)-1], y[len(y)-1], color = 'r')
+for i in range(1,len(x)-1):
+    ax1.text(x[i], y[i], str(i))
+ax1.set_ylim(36.8,37.6)
+ax1.set_xlim(161.5, 162)
+plt.show()
+
+ax2 = plt.scatter(range(len(L_ang[:11])), (np.asarray(L_ang[:11])*180/np.pi), ls='-.', lw = 3)
+plt.title('Angles')
+plt.ylabel(r'Angle ($\degree$)')
+plt.xlabel('step #')
+
+plt.show()
 #%%
 
 # plt.figure()
