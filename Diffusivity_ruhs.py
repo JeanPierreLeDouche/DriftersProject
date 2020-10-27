@@ -12,10 +12,21 @@ from scipy.stats import norm
 import scipy
 
 data = pickle.load(
-    open(r'C:\Users\Gebruiker\Documents\Climate_Physics\Year2\MAIO\Driftersproject\ALL_buoydataforRuhs.p', "rb"))
+    open(r'C:\Users\Ruben\Documents\CLPH\MAIO\ruhsdata.p', "rb"))
 
 
+# verschillende k grids
+
+lat_points = 180
+lon_points = 360
 D_grid = [[[] for x in range(lon_points + 1)] for x in range(lat_points + 1)]
+
+print(data['Date'])
+
+#Filteren voor 1 maand
+
+# data = data.loc[data['Date'] < 1]
+
 
 
 ### Plotting
