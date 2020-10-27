@@ -101,10 +101,6 @@ for ID in enumerate(buoy_IDs[0:10]):
         bear.append(bearing1)
         angle = (bearing2 - bearing1) * (180 / np.pi)  # in degrees
 
-
-
-
-
         # print(angle)
 
 
