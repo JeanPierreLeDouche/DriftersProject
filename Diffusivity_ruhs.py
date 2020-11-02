@@ -42,6 +42,7 @@ def K(k_davis_p2, k_disp_p2):
 
 data = pickle.load(
     open(r'C:\Users\Ruben\Documents\CLPH\MAIO\ruhsdata.p', "rb"))
+    open(r'BuoyDatabaseforRuhs.p', "rb"))
 
 r_e = 6.37e6 #m
 
@@ -58,7 +59,7 @@ for months in range(1,13):
     print(f'The month is:{months}')
     #Filter date
     current_data = data.loc[data['Month'] == months]
-    current_data.dropna(thresh=1)
+    current_data.dropna(thresh=1) # drops every row with a NaN 
 
 
     buoy_IDs = np.unique(current_data["ID"])
@@ -67,29 +68,33 @@ for months in range(1,13):
 
     #averages to calculate residual velocities in m/s
 
-    ve_avg = np.mean(np.asarray(current_data["VE(CM/S)"]))/100
-    vn_avg = np.mean(np.asarray(current_data["VN(CM/S)"]))/100
+
 
     # print(ve_avg, vn_avg)
     #per buoy berekeningen
     ###### Loop over boeien en selecteer de goede__________________________________________________________________
     for j, ID in enumerate(buoy_IDs[:]):
-        # print('Buoy ',j)
+        print('Buoy ',j)
         buoy = current_data.loc[current_data["ID"] == buoy_IDs[j]]
 
 
-        if len(buoy['Lon']) < 81:
+        if len(buoy['Lon']) < 83:
             # print(f'Buoy {j} does not have enough data')
             continue
 
-        if np.asarray(buoy["VE(CM/S)"])[0] >400:
-            # print(f'Initial speed incorrect, skipping to next buoy')
-            continue
+        # if np.asarray(buoy["VE(CM/S)"])[0] >400:
+        #     # print(f'Initial speed incorrect, skipping to next buoy')
+        #     continue
 
-        if j in [508, 512]:
-            continue
+        # if j in [508, 512]:
+        #     continue
 
-        buoy = buoy[:-1]
+        buoy = buoy[1:-1]
+        
+        ve_avg = np.mean(np.asarray(buoy["VE(CM/S)"]))/100
+        vn_avg = np.mean(np.asarray(buoy["VN(CM/S)"]))/100
+        
+        
         # print(f'The buoy length is: {len(buoy)}')
     #########
 
@@ -140,7 +145,7 @@ for months in range(1,13):
 
         # print(k_p2_dav)
 
-        #####Disp methode
+        #####Dispersion methode
         t_0 = 0
 
         x_displacement = np.zeros(21)
@@ -157,9 +162,9 @@ for months in range(1,13):
         dt = 24*3600
 
 
-        if j == 254:
-            pass
-            # print(t_0)
+        # if j == 254:
+        #     pass
+        #     # print(t_0)
 
         for t in range(t_0 + 4,t_0+80, 4):
 
@@ -190,7 +195,6 @@ for months in range(1,13):
         latlons[1][:] = lons
         latlons = latlons.astype(int)
 
-
         check_list = []
         for i, _ in enumerate(latlons[0][:]):
             lat = latlons[0][i]
@@ -208,12 +212,6 @@ for months in range(1,13):
             except:
                 print('error')
                 continue
-
-
-
-
-
-
 
 
 k_i = np.zeros((180,360))

@@ -26,17 +26,18 @@ data.loc[data['Lat'] > 90, 'Lat'] = np.nan
 data.loc[data['Lon'] > 360, 'Lon'] = np.nan
 
 data = data.loc[data['Year'] > 2011]
+data = data.loc[data['Year'] < 2013]
 
-### introduce single date and hourly time format
+# ### introduce single date and hourly time format
 
-data["Hour"] = (data["Day"]-np.floor(data["Day"]) )*24 # convert decimals from "Day" colunn into hours
-data["Date"] = pd.to_datetime(data[["Year", "Month", "Day"]], yearfirst =True) + pd.to_timedelta(data["Hour"], unit = 'h')
+# data["Hour"] = (data["Day"]-np.floor(data["Day"]) )*24 # convert decimals from "Day" colunn into hours
+# data["Date"] = pd.to_datetime(data[["Year", "Month", "Day"]], yearfirst =True) + pd.to_timedelta(data["Hour"], unit = 'h')
 
-# remove the now unneccesary columns
-data.drop(["Year", "Month", "Day", "Hour"], inplace=True, axis = 'columns')
+# # remove the now unneccesary columns
+# data.drop(["Year", "Month", "Day", "Hour"], inplace=True, axis = 'columns')
 
-# sort by date to get a timeseries
-data = data.sort_values(by="Date")
+# # sort by date to get a timeseries
+# data = data.sort_values(by="Date")
 
 print('Data filtered and sorted, now saving as pickle file...')
 
