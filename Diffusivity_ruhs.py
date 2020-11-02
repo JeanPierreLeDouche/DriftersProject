@@ -15,16 +15,12 @@ import matplotlib.colors as col
 def k_p2_func(k_xx, k_xy, k_yy):
     theta = 0.5 * np.arctan(2 * k_xy / (k_xx - k_yy))  # eq 9 Rühs
     k_p2 = k_xx * np.sin(theta) ** 2 - k_xy * np.sin(2 * theta) + k_yy * np.cos(theta) ** 2  # eq 8 Rühs
-
     return k_p2
-
 
 def k_davis(v_res, d_res):
     # v_res, d_res are scalar values of the residual velocity and displacement
     k = -1 * v_res * d_res
-
     return k
-
 
 def k_disp(d, d_2, prev_d, prev_d_2, delta_t):  # displacement arguments all residual
     prev_s = prev_d * prev_d_2  # eq 7 Rühs
@@ -32,9 +28,7 @@ def k_disp(d, d_2, prev_d, prev_d_2, delta_t):  # displacement arguments all res
 
     delta_s = s - prev_s
     k = 0.5 * delta_s / delta_t  # eq 6 Rühs
-
     return k
-
 
 def K(k_davis_p2, k_disp_p2):
     K = (k_davis_p2 + k_disp_p2) / 2
@@ -42,6 +36,7 @@ def K(k_davis_p2, k_disp_p2):
 
 data = pickle.load(
     open(r'C:\Users\Ruben\Documents\CLPH\MAIO\ruhsdata.p', "rb"))
+    # open(r'C:\Users\Ruben\Documents\CLPH\MAIO\ruhsdata.p', "rb"))
     open(r'BuoyDatabaseforRuhs.p', "rb"))
 
 r_e = 6.37e6 #m
