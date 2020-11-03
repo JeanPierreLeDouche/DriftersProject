@@ -10,6 +10,7 @@ import scipy.stats as sc
 import statsmodels.api as sm
 from scipy.stats import norm
 import scipy
+from scipy.stats import vonmises
 
 
 # n = 100  # number of buoys to be calculated
@@ -43,6 +44,13 @@ def diffusion(v, delta, psi, n=2):
         value = (1. / n) * ((v ** 2 * delta) / (1 - psi))
     return value
 
+def normalize(list1):
+    arr = np.asarray(list1)
+    mean = np.mean(arr)
+    std = np.std(arr)
+    arr = (arr - mean)/std    
+    return arr
+
 
 buoy_IDs = np.unique(data["ID"])
 
@@ -54,15 +62,17 @@ t1 = perf_counter()
 
 L_pos = []
 L_ang = []
+L_ang_NH = []
+L_ang_SH = []
 
 lat_points = 180
-lon_points = 360
+lon_points = 361
 
 angles_grid = [[[] for x in range(lon_points)] for x in range(lat_points + 1)]
 speeds_grid = [[[] for x in range(lon_points)] for x in range(lat_points + 1)]
 
 # loop through each buoy and then go by time (second for loop)
-for ID in enumerate(buoy_IDs[0:10]):
+for ID in enumerate(buoy_IDs):
     print(ID[0])
     current_buoy_data = data.loc[data['ID'] == ID[1]]
     buoy_lons_lats = current_buoy_data[['Lon', 'Lat']]
@@ -99,11 +109,9 @@ for ID in enumerate(buoy_IDs[0:10]):
         # bearings = np.array([bearing1, bearing2])
 
         bear.append(bearing1)
+        
         angle = (bearing2 - bearing1) * (180 / np.pi)  # in degrees
-
-        # print(angle)
-
-
+        
         if angle > 180:
             # print('True')
             angle -= 360
@@ -111,7 +119,12 @@ for ID in enumerate(buoy_IDs[0:10]):
             angle += 360
 
         angles.append(angle)
-
+        
+        if x_curr[1] > 0:
+            L_ang_NH.append(angle)
+        elif x_curr[1] < 0: 
+            L_ang_SH.append(angle)    
+        
         # lats and lons are rounded down to their nearest integer
         lon = int(x_prev[0])
         lat = int(x_prev[1])
@@ -161,8 +174,65 @@ for lat in range(0, 180):
 tau_grid = tau(6 * 3600, psi_grid)
 D_grid = diffusion(avg_speed_grid, 6 * 3600, psi_grid)
 
-x = []
-y = []
+
+
+
+### vonmises fitting and plots
+#%%
+def misesfitplot(data, title):
+    # calculate statistical metrics
+    mean =np.round( np.mean(data), 2)
+    std = np.round(np.std(data), 2)
+    datapoints = len(data)
+    
+    #normalize data
+    norm_data = normalize(data) - 0.03
+    
+    # fit von mises distr.
+    misfit =  vonmises.fit(norm_data, fscale=1)
+    kappa = misfit[0]
+    loc = misfit[1]
+    scale = misfit[2]
+
+    x = np.linspace(vonmises.ppf(0.001, kappa),
+                    vonmises.ppf(0.999, kappa), 100)
+    
+    # actual plotting
+    plt.title(title, fontsize =20)
+    plt.hist(norm_data, 360, density=True, label='normalized data')
+    plt.text(-3, 0.7, f'mean: {mean} $\degree$', fontsize = 18)
+    plt.text(-3, 0.65, f'std: {std} $\degree$', fontsize = 18)
+    plt.text(-3, 0.60, f'datapoints: {datapoints}', fontsize = 18)
+    plt.plot(x, vonmises.pdf(x, kappa=kappa, loc=loc, scale=scale), color='r', lw = 3)
+    plt.ylabel('(normalized) frequency', fontsize = 15)
+    plt.xlabel('(normalized) angle', fontsize = 15)
+    plt.yticks(fontsize =15)
+    plt.xticks(fontsize =15)
+    
+    plt.show()
+    return 
+
+misesfitplot(L_ang, "Histogram of all angles")
+misesfitplot(L_ang_SH, 'Histogram of SH angles')
+misesfitplot(L_ang_NH, 'Histogram of NH angles')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# x = []
+# y = []
 
 ###Single buoy plot and angles
 #
@@ -248,26 +318,26 @@ y = []
 # ### ---------------------------------------------------------------------------
 #
 #%%
-# # fit normal distributions
-x = np.arange(-180,181,1)
-norm_a, norm_b = sc.norm.fit(np.asarray(L_ang)) # see if we can make this better
-y_norm = sc.norm(norm_a, norm_b)
+# fit normal distributions
+# x = np.arange(-180,181,1)
+# norm_a, norm_b = sc.norm.fit(np.asarray(L_ang)) # see if we can make this better
+# y_norm = sc.norm(norm_a, norm_b)
 
-plt.figure()
-plt.ylabel('frequency')
-plt.xlabel(r'Angle ($\theta$)')
-plt.hist(np.asarray(L_ang), 360, density = True, stacked =True) # check if normalization is done correctly
-plt.plot(x, y_norm.pdf(x), color = 'r')
+# plt.figure()
+# plt.ylabel('frequency')
+# plt.xlabel(r'Angle ($\theta$)')
+# plt.hist(np.asarray(L_ang), 360, density = True, stacked =True) # check if normalization is done correctly
+# plt.plot(x, y_norm.pdf(x), color = 'r')
+# # plt.show()
+
+# plt.plot(x, y.pdf(x), color = 'r')
+
+# plt.legend(['Fitted normal distribution', 'Data'])
+
 # plt.show()
 
-plt.plot(x, y.pdf(x), color = 'r')
-
-plt.legend(['Fitted normal distribution', 'Data'])
-
-plt.show()
-
-s, p = sc.normaltest(L_ang)
-print(p)
+# s, p = sc.normaltest(L_ang)
+# print(p)
 
 
 # #%%_________________________________________________________________________________________________
