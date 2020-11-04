@@ -267,13 +267,13 @@ misesfitplot(L_ang_NH, 'Histogram of NH angles')
 # # %%
 
 ###_____________________________________________________________________________________________________________________
-
+#%%
 # plt.figure()
 # plt.title('Correlation timescale')
 # plt.contourf(tau_grid)
 # plt.colorbar()
 # plt.show()
-#
+
 # plt.figure()
 # plt.title('Diffusivity')
 # plt.contourf(D_grid)
