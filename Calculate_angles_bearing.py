@@ -211,23 +211,10 @@ def misesfitplot(data, title):
     
     plt.show()
     return 
-
-misesfitplot(L_ang, "Histogram of all angles")
-misesfitplot(L_ang_SH, 'Histogram of SH angles')
-misesfitplot(L_ang_NH, 'Histogram of NH angles')
-
-
-
-
-
-
-
-
-
-
-
-
-
+#%%
+misesfitplot(np.asarray(L_ang)*-1, "Histogram of all angles")
+misesfitplot(np.asarray(L_ang_SH) *-1, 'Histogram of SH angles')
+misesfitplot(np.asarray(L_ang_NH) * -1, 'Histogram of NH angles')
 
 
 
