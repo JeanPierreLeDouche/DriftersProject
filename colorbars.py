@@ -68,6 +68,7 @@ for _,year in enumerate(years[:]):
         print(f'The month is:{months}')
     # Filter date
         current_data = year_data.loc[data['Month'] == months]
+        
         current_data.dropna(thresh=1)  # drops every row with a NaN
 
 

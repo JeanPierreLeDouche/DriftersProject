@@ -1,0 +1,403 @@
+import pandas as pd
+import numpy as np
+import pickle
+import matplotlib.pyplot as plt
+import cartopy.crs as ccrs
+import cartopy.feature as cfeature
+from time import perf_counter
+import numpy.ma as ma
+import scipy.stats as sc
+import statsmodels.api as sm
+from scipy.stats import norm
+import scipy
+import matplotlib.colors as col
+
+def k_p2_func(k_xx, k_xy, k_yy):
+    theta = 0.5 * np.arctan(2 * k_xy / (k_xx - k_yy))  # eq 9 Rühs
+    k_p2 = k_xx * np.sin(theta) ** 2 - k_xy * np.sin(2 * theta) + k_yy * np.cos(theta) ** 2  # eq 8 Rühs
+    return k_p2
+
+def k_davis(v_res, d_res):
+    # v_res, d_res are scalar values of the residual velocity and displacement
+    k = -1 * v_res * d_res
+    return k
+
+def k_disp(d, d_2, prev_d, prev_d_2, delta_t):  # displacement arguments all residual
+    prev_s = prev_d * prev_d_2  # eq 7 Rühs
+    s = d * d_2  # eq 7
+
+    delta_s = s - prev_s
+    k = 0.5 * delta_s / delta_t  # eq 6 Rühs
+    return k
+
+def K(k_davis_p2, k_disp_p2):
+    K = (k_davis_p2 + k_disp_p2) / 2
+    return K
+
+data = pickle.load(
+# open(r'C:\Users\Ruben\Documents\CLPH\MAIO\ruhsdata.p', "rb"))
+# open(r'C:\Users\Ruben\Documents\CLPH\MAIO\ruhsdata.p', "rb"))
+open(r'BuoyDatabaseforRuhs.p', "rb"))
+
+r_e = 6.37e6 #m
+
+# declaring several k grids (lon, lat, k)
+
+lat_points = 180
+lon_points = 360
+K_grid_dav = [[[] for x in range(lon_points)] for x in range(lat_points + 1)]
+K_grid_disp = [[[] for x in range(lon_points)] for x in range(lat_points + 1)]
+K_grid = [[[] for x in range(lon_points)] for x in range(lat_points + 1)]
+
+
+years = [2012, 2013, 2014, 2015, 2016, 2017]
+
+for _,year in enumerate(years[:]):
+    print(f'The year is: {year}')
+    year_data = data.loc[data['Year'] == year]
+    
+    for months in range(1,13):
+        print(f'The month is:{months}')
+        #Filter date
+        current_data = year_data.loc[data['Month'] == months]
+
+        current_data.dropna(thresh=1) # drops every row with a NaN 
+    
+        buoy_IDs = np.unique(current_data["ID"]) # list of buoy ID's
+        # print(f'There are {len(buoy_IDs)} unique buoys')
+    
+    
+        ###### Loop over all buoys within the current month and select the ones with enough data ______________
+        for j, ID in enumerate(buoy_IDs[:]):
+            # print('Buoy ',j)
+            buoy = current_data.loc[current_data["ID"] == buoy_IDs[j]]
+    
+            if len(buoy['Lon']) < 83:
+                # print(f'Buoy {j} does not have enough data')
+                continue
+    
+    
+            # if j in [508, 512]:
+            #     continue
+    
+            # the first and last datapoint from the raw data is currently always wrong
+            # for some reason related to measurement/processing. The velocity is 
+            # exactly 999.999 therefore we disregard the first and last point.
+            buoy = buoy[1:-1]
+            
+            #monhtly averages to calculate residual velocities in m/s. 
+            #ve: "easterly" velocity
+            #vn: "northerly" velocity 
+            
+            ve_avg = np.mean(np.asarray(buoy["VE(CM/S)"]))/100
+            vn_avg = np.mean(np.asarray(buoy["VN(CM/S)"]))/100
+            # print(ve_avg, vn_avg)
+            
+            # print(f'The buoy length is: {len(buoy)}')
+            
+        #########
+    
+            #Davis method___________________________________________
+            # set reference time t_0
+            t_0 = len(buoy['Lat'] - 1)
+    
+            #Load data
+            lons = np.asarray(buoy["Lon"])
+            lats = np.asarray(buoy["Lat"])
+            ve = np.asarray(buoy["VE(CM/S)"])/100 # m/s
+            vn = np.asarray(buoy["VN(CM/S)"])/100 # m/s
+    
+            #Initialize vectors
+            x_displacement = np.zeros(20)
+            y_displacement = np.zeros(20)
+            x_displacement_avg = np.zeros(20)
+            y_displacement_avg = np.zeros(20)
+            x_exp = np.zeros(20)
+            y_exp = np.zeros(20)
+            x_disp_res = np.zeros(20)
+            y_disp_res = np.zeros(20)
+    
+            i = 0
+            v_x_res = ve[t_0 - 1] - ve_avg
+            v_y_res = vn[t_0 - 1] - vn_avg
+            
+            x_disp_res_sum = 0.
+            y_disp_res_sum = 0.
+            for t in range(t_0, t_0 - 80, -4):
+                
+                # expected displacement in x: x_exp
+                x_exp[i] = (i+1) * (3600 * 24) * ve_avg
+                # actual displacementi n x: x_displacement
+                x_displacement[i] = np.abs((lons[t_0 - 1] - lons[t - 5]) * np.cos(lats[t-5]*(np.pi/180)) * (2*np.pi *r_e/360))  #<------2pi?------- 
+                # residual displacement in x: x_disp_res
+                x_disp_res[i] = x_displacement[i] - x_exp[i] - x_disp_res_sum
+                x_disp_res_sum += x_disp_res[i]
+                
+                # similarly for y
+                y_exp[i] = (i + 1) * (3600 * 24) * vn_avg
+                y_displacement[i] = np.abs((lats[t_0 - 1] - lats[t - 5]) * (2* np.pi *r_e / 360)) #<-----2pi-----
+                y_disp_res[i] = y_displacement[i] - y_exp[i] - y_disp_res_sum
+                y_disp_res_sum += y_disp_res[i]
+    
+                i += 1
+            
+            # calculate all relevant components of the eddy diffusivity tensor
+            k_xx_dav = k_davis(v_x_res, x_disp_res)
+            k_xy_dav = k_davis(v_x_res, y_disp_res)
+            k_yx_dav = k_davis(v_y_res, x_disp_res)
+            k_yy_dav = k_davis(v_y_res, y_disp_res)
+    
+            k_xy_dav = (k_xy_dav + k_yy_dav)/2 # eq. 5 Rühs 2018
+            
+            # substitute davis eddy diffusivity components into formula for minor principal component of K
+            k_p2_dav = k_p2_func(k_xx_dav, k_xy_dav, k_yy_dav)
+    
+            # print(k_p2_dav)
+    
+            #####Dispersion method
+            t_0 = 0
+    
+            x_displacement = np.zeros(21)
+            y_displacement = np.zeros(21)
+            x_displacement_avg = np.zeros(21)
+            y_displacement_avg = np.zeros(21)
+            x_exp = np.zeros(21)
+            y_exp = np.zeros(21)
+            x_disp_res = np.zeros(21)
+            y_disp_res = np.zeros(21)
+    
+            i = 0
+    
+            dt = 24*3600
+    
+            # see previous for loop for explanation
+            
+            x_disp_res_sum = 0.
+            y_disp_res_sum = 0.
+            
+            for t in range(t_0 + 4,t_0+80, 4):
+                
+                x_exp[i] = (i + 1) * (3600 * 24) * ve_avg 
+                x_displacement[i] = np.abs((lons[t_0] - lons[t]) * np.cos(lats[t] * (np.pi / 180)) * (2* np.pi*r_e / 360)) #<------2pi?------- 
+                x_disp_res[i] = x_displacement[i] - x_exp[i] - x_disp_res_sum
+                x_disp_res_sum += x_disp_res[i]
+    
+                y_exp[i] = (i + 1) * (3600 * 24) * vn_avg
+                y_displacement[i] = np.abs((lats[t_0 - 1] - lats[t]) * (2* np.pi * r_e / 360)) #<------2pi?------- 
+                y_disp_res[i] = y_displacement[i] - y_exp[i] -y_disp_res_sum
+                y_disp_res_sum += y_disp_res[i]
+    
+                i += 1
+    
+            k_xx_disp = k_disp(x_disp_res[1:], x_disp_res[1:], x_disp_res[:-1], x_disp_res[:-1],dt)[:-1]
+            k_xy_disp = k_disp(x_disp_res[1:], y_disp_res[1:], x_disp_res[:-1], y_disp_res[:-1],dt)[:-1]
+            k_yy_disp = k_disp(y_disp_res[1:], y_disp_res[1:], y_disp_res[:-1], y_disp_res[:-1],dt)[:-1]
+    
+            k_p2_disp = k_p2_func(k_xx_disp, k_xy_disp, k_yy_disp)
+    
+            k_inf_dav = np.abs(np.mean(k_p2_dav[14:]))
+            k_inf_disp = np.abs(np.mean(k_p2_disp[14:]))
+    
+            k_inf_t = K(k_inf_dav, k_inf_disp)
+    
+            # so far we have calculate values of the eddy diffusivity for both methods 
+            # now we want to store these values spatially on the coordinates of their
+            # runs
+    
+            latlons = np.zeros((2,len(lats)))
+            latlons[0][:] = lats
+            latlons[1][:] = lons
+            latlons = latlons.astype(int)
+    
+            check_list = []
+            for i, _ in enumerate(latlons[0][:]):
+                lat = latlons[0][i]
+                lon = latlons[1][i]
+                check = (lat, lon)
+                
+                try:
+                    if check not in check_list:
+                        check_list.append(check)
+                        K_grid[lat + 90][lon].append(k_inf_t)
+                        K_grid_dav[lat + 90][lon].append(k_inf_dav)
+                        K_grid_disp[lat + 90][lon].append(k_inf_disp)
+                    else:
+                        # print('already done')
+                        pass
+                except:
+                    
+                    print(f'error at: {latlons}')
+                    continue
+            
+            # the objects called K_grid.. are now 3D objects where the first 2 
+            # dimensions are lat lon and the third values of K. In the next part 
+            # of the code we will take an average of these K values to get a 2D
+            # grid we can plot
+
+k_i = np.zeros((180,360))
+k_i_dav = np.zeros((180,360))
+k_i_disp = np.zeros((180,360))
+
+
+
+# calculate the average over grid slice over the third dimension
+for lat in range(0, 180):
+    for lon in range(0, 360):
+        K_grid_slice = K_grid[lat][lon]
+
+        if len(K_grid_slice) != 0:
+            k_i[lat][lon] = np.nanmean(np.asarray(K_grid[lat][lon]))
+            k_i_dav[lat][lon] = np.nanmean(np.asarray(K_grid_dav[lat][lon]))
+            k_i_disp[lat][lon] = np.nanmean(np.asarray(K_grid_disp[lat][lon]))
+            # print(K_grid_slice)
+            # print(k_i[lat][lon])
+        else:
+            k_i[lat][lon] = np.NaN
+            k_i_dav[lat][lon] = np.NaN
+            k_i_disp[lat][lon] = np.NaN
+
+
+### Plotting_____________________________________________________________________________________________
+
+longit = np.linspace(0, 360, 360)
+latit = np.linspace(-90, 90, 180)
+
+data_crs = ccrs.PlateCarree()
+
+fig, ax = plt.subplots(1, 1, figsize=(10, 5), subplot_kw={'projection': ccrs.PlateCarree()})
+
+cbar_ax = fig.add_axes([0.9, 0.2, 0.03, 0.7])
+fig.subplots_adjust(hspace=0, wspace=0, top=0.90, right=0.8)
+
+# bounds_c = [0.25e3,0.5e3, 1e3, 2e3, 4e3, 8e3, 16e3, 32e3]
+
+bounds_c = [ 0.125e3, 0.25e3,0.37e3, 0.5e3, 0.75e3, 1e3, 1.5e3, 2e3, 3e3, 4e3, 6e3, 8e3, 12e3, 16e3, 24e3,32e3]
+
+ax.set_title(r'$K_{inf}$ ')
+ax.coastlines()
+# ax.legend()
+ax.set_global()
+
+cmap1 = plt.cm.nipy_spectral
+cmap1.set_over('#c99995')
+
+ax.gridlines(crs=ccrs.PlateCarree(), linewidth=0.5, color='black',
+             draw_labels=True, alpha=0.5, linestyle='--')
+c = ax.contourf(longit, latit, k_i, levels = bounds_c, norm=col.LogNorm(), transform=data_crs, extend='both', cmap = 'nipy_spectral')
+
+cbar1 = plt.colorbar(c, cax=cbar_ax, ax=ax)
+cbar1.ax.set_yticklabels([' 0.125','0.37',' 0.75', '1.5',' 3', '6', '12',' 24'])
+cbar1.ax.set_title(r'$10^3 m^2 s^{-1}$')
+
+
+plt.show()
+
+
+
+#######################################################################################
+
+fig, ax = plt.subplots(1, 1, figsize=(10, 5), subplot_kw={'projection': ccrs.PlateCarree()})
+
+cbar_ax = fig.add_axes([0.9, 0.2, 0.03, 0.7])
+fig.subplots_adjust(hspace=0, wspace=0, top=0.90, right=0.8)
+
+ax.set_title(r'$K_{inf}$ Davis ')
+ax.coastlines()
+# ax.legend()
+ax.set_global()
+ax.gridlines(crs=ccrs.PlateCarree(), linewidth=0.5, color='black',
+             draw_labels=True, alpha=0.5, linestyle='--')
+d = ax.contourf(longit, latit, k_i_dav, bounds_c, norm=col.LogNorm(), transform=data_crs, extend='both', cmap = 'nipy_spectral')
+
+cbar2 = plt.colorbar(d, cax=cbar_ax, ax=ax)
+cbar2.ax.set_yticklabels([' 0.125','0.37',' 0.75', '1.5',' 3', '6', '12',' 24'])
+cbar2.ax.set_title(r'$10^3 m^2 s^{-1}$')
+
+plt.show()
+
+
+fig, ax = plt.subplots(1, 1, figsize=(10, 5), subplot_kw={'projection': ccrs.PlateCarree()})
+
+cbar_ax = fig.add_axes([0.9, 0.2, 0.03, 0.7])
+fig.subplots_adjust(hspace=0, wspace=0, top=0.90, right=0.8)
+
+ax.set_title(r'$K_{inf}$ Disp ')
+ax.coastlines()
+# ax.legend()
+ax.set_global()
+ax.gridlines(crs=ccrs.PlateCarree(), linewidth=0.5, color='black',
+             draw_labels=True, alpha=0.5, linestyle='--')
+e = ax.contourf(longit, latit, k_i_disp, bounds_c, norm=col.LogNorm(), transform=data_crs, extend='both', cmap = 'nipy_spectral')
+
+cbar3 = plt.colorbar(e, cax=cbar_ax, ax=ax)
+cbar3.ax.set_yticklabels([' 0.125','0.37',' 0.75', '1.5',' 3', '6', '12',' 24'])
+cbar3.ax.set_title(r'$10^3 m^2 s^{-1}$')
+
+
+plt.show()
+###############-_-------------------------------------------------------------------------------------------
+
+west_border = 10
+east_border = 50
+north_border = -19
+south_border = -49
+
+fig, ax = plt.subplots(1, 1, figsize=(10, 5), subplot_kw={'projection': ccrs.PlateCarree()})
+
+cbar_ax = fig.add_axes([0.9, 0.2, 0.03, 0.7])
+fig.subplots_adjust(hspace=0, wspace=0, top=0.90, right=0.8)
+
+ax.set_xlim([west_border, east_border])
+ax.set_ylim([south_border, north_border])
+
+ax.set_title(r'$K_{inf}$')
+ax.coastlines()
+# ax.legend()
+
+ax.gridlines(crs=ccrs.PlateCarree(), linewidth=0.5, color='black',
+             draw_labels=True, alpha=0.5, linestyle='--')
+c = ax.contourf(longit, latit, k_i, bounds_c, norm=col.LogNorm(), transform=data_crs, extend='both', cmap = 'nipy_spectral')
+
+cbar4 = plt.colorbar(c, cax=cbar_ax, ax=ax)
+cbar4.ax.set_yticklabels([' 0.125','0.37',' 0.75', '1.5',' 3', '6', '12',' 24'])
+cbar4.ax.set_title(r'$10^3 m^2 s^{-1}$')
+plt.show()
+
+fig, ax = plt.subplots(1, 1, figsize=(10, 5), subplot_kw={'projection': ccrs.PlateCarree()})
+
+cbar_ax = fig.add_axes([0.9, 0.2, 0.03, 0.7])
+fig.subplots_adjust(hspace=0, wspace=0, top=0.90, right=0.8)
+
+ax.set_xlim([west_border, east_border])
+ax.set_ylim([south_border, north_border])
+ax.set_title(r'$K_{inf}$ Davis ')
+ax.coastlines()
+# ax.legend()
+
+ax.gridlines(crs=ccrs.PlateCarree(), linewidth=0.5, color='black',
+             draw_labels=True, alpha=0.5, linestyle='--')
+e = ax.contourf(longit, latit, k_i_dav, bounds_c, norm=col.LogNorm(), transform=data_crs, extend='both', cmap = 'nipy_spectral')
+
+cbar5 = plt.colorbar(e, cax=cbar_ax, ax=ax)
+cbar5.ax.set_yticklabels([' 0.125','0.37',' 0.75', '1.5',' 3', '6', '12',' 24'])
+cbar5.ax.set_title(r'$10^3 m^2 s^{-1}$')
+plt.show()
+
+fig, ax = plt.subplots(1, 1, figsize=(10, 5), subplot_kw={'projection': ccrs.PlateCarree()})
+
+cbar_ax = fig.add_axes([0.9, 0.2, 0.03, 0.7])
+fig.subplots_adjust(hspace=0, wspace=0, top=0.90, right=0.8)
+
+ax.set_title(r'$K_{inf}$ Disp ')
+ax.coastlines()
+ax.set_xlim([west_border, east_border])
+ax.set_ylim([south_border, north_border])
+# ax.legend()
+ax.gridlines(crs=ccrs.PlateCarree(), linewidth=0.5, color='black',
+             draw_labels=True, alpha=0.5, linestyle='--')
+e = ax.contourf(longit, latit, k_i_disp, bounds_c, norm=col.LogNorm(), transform=data_crs, extend='both', cmap = 'nipy_spectral')
+
+cbar6 = plt.colorbar(e, cax=cbar_ax, ax=ax)
+cbar6.ax.set_yticklabels([' 0.125','0.37',' 0.75', '1.5',' 3', '6', '12',' 24'])
+cbar6.ax.set_title(r'$10^3 m^2 s^{-1}$')
+plt.show()

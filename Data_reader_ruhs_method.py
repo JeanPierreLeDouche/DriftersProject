@@ -26,7 +26,7 @@ data.loc[data['Lat'] > 90, 'Lat'] = np.nan
 data.loc[data['Lon'] > 360, 'Lon'] = np.nan
 
 data = data.loc[data['Year'] > 2011]
-data = data.loc[data['Year'] < 2013]
+data = data.loc[data['Year'] < 2018]
 
 # ### introduce single date and hourly time format
 

@@ -40,9 +40,9 @@ def K(k_davis_p2, k_disp_p2):
 
 
 data = pickle.load(
-    open(r'C:\Users\Ruben\Documents\CLPH\MAIO\ruhsdata.p', "rb"))
+    # open(r'C:\Users\Ruben\Documents\CLPH\MAIO\ruhsdata.p', "rb"))
 # open(r'C:\Users\Ruben\Documents\CLPH\MAIO\ruhsdata.p', "rb"))
-# open(r'BuoyDatabaseforRuhs.p', "rb"))
+open(r'BuoyDatabaseforRuhs.p', "rb"))
 
 r_e = 6.37e6  # m
 
